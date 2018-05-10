@@ -20,7 +20,7 @@ public class Cli {
 		List<Person> p = testData();
 		Item i1 = new todoItem();
 		i1.name = "Something";
-		i1.addResponsible(p.get(0).id);
+		//i1.addResponsible(p.get(0).id);
 		
 		System.out.println(i1);
 	}

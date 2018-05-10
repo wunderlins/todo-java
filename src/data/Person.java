@@ -1,15 +1,25 @@
 package data;
 
+import com.j256.ormlite.field.DatabaseField;
+
 abstract class Person extends Commitable {
 	
-	protected int id = -1;
-	protected String name = "";
-	protected String firstname = "";
-	protected String nick = "";
-	protected String email = null;
+    @DatabaseField(generatedId = true)
+	protected int id;
+    
+    @DatabaseField
+	protected String name;
+    
+    @DatabaseField
+	protected String firstname;
+	
+    @DatabaseField
+	protected String nick;
+    
+    @DatabaseField
+	protected String email;
 	
 	// constructors
-	
 	public Person() {super();}
 	
 	public Person(String name, String firstname) {

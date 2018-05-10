@@ -1,7 +1,10 @@
 package data;
 
-import java.util.ArrayList;
 import java.util.Date;
+
+import com.j256.ormlite.dao.ForeignCollection;
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.field.ForeignCollectionField;
 
 /**
  * @author wus
@@ -13,62 +16,74 @@ abstract class Item extends Commitable {
 	 * <p>
 	 * -1 means the item has not yet been commited. 
 	 */
-	Integer id = -1;
+    @DatabaseField(generatedId = true)
+	Integer id;
 	
 	/**
 	 * name of the item 
 	 */
-	String name = "";
+    @DatabaseField
+	String name;
 	
 	/**
 	 * Larger description, may contain HTML code
 	 */
-	String description = "";
+    @DatabaseField
+	String description;
 	
 	/**
 	 * The parent's node id. -1 is root 
 	 */
-	Integer parentId = -1;
+    @DatabaseField
+	Integer parentId;
 	
 	/**
 	 *	list of children 
 	 */
-	ArrayList<Integer> childIds = new ArrayList<Integer>();
+    @ForeignCollectionField(eager = false) // do lazy loading
+    ForeignCollection<Item> childIds;
 	
 	/**
 	 * percent: 0-100
 	 */
+    @DatabaseField
 	int progress = 0; 
 	
 	/**
 	 * Start date of the Task
 	 */
+    @DatabaseField
 	Date startDate = null;
 	
 	/**
 	 * End Date of the Task
 	 */
+    @DatabaseField
 	Date endDate = null;
 	
 	/**
 	 * list of person Ids who are responsible for this Task
 	 */
-	ArrayList<Integer> responsible = new ArrayList<Integer>();
+    @ForeignCollectionField(eager = false) // do lazy loading
+    ForeignCollection<Person> responsible;
 	
 	/**
 	 * List of Person IDs who are accountable for this task
 	 */
-	ArrayList<Integer> accountable = new ArrayList<Integer>();
+    @ForeignCollectionField(eager = false) // do lazy loading
+    ForeignCollection<Person> accountable;
 	
 	/**
 	 * people to inform about the task
 	 */
-	ArrayList<Integer> informed = new ArrayList<Integer>();
+    @ForeignCollectionField(eager = false) // do lazy loading
+    ForeignCollection<Person> informed;
 	
 	/**
 	 * List of person IDs which need to be consulted 
 	 */
-	ArrayList<Integer> consulted = new ArrayList<Integer>();
+    @ForeignCollectionField(eager = false) // do lazy loading
+    ForeignCollection<Person> consulted;
 	
 	// constructors
 	public Item() {super();}
@@ -120,11 +135,11 @@ abstract class Item extends Commitable {
 		dirty = true;
 	}
 
-	public ArrayList<Integer> getChildIds() {
+	public ForeignCollection<Item> getChildIds() {
 		return childIds;
 	}
 
-	public void setChildIds(ArrayList<Integer> childIds) {
+	public void setChildIds(ForeignCollection<Item> childIds) {
 		this.childIds = childIds;
 		dirty = true;
 	}
@@ -156,72 +171,74 @@ abstract class Item extends Commitable {
 		dirty = true;
 	}
 
-	public ArrayList<Integer> getResponsible() {
+	public ForeignCollection<Person> getResponsible() {
 		return responsible;
 	}
 
-	public void setResponsible(ArrayList<Integer> responsible) {
+	public void setResponsible(ForeignCollection<Person> responsible) {
 		this.responsible = responsible;
 		dirty = true;
 	}
 
-	public ArrayList<Integer> getAccountable() {
+	public ForeignCollection<Person> getAccountable() {
 		return accountable;
 	}
 
-	public void setAccountable(ArrayList<Integer> accountable) {
+	public void setAccountable(ForeignCollection<Person> accountable) {
 		this.accountable = accountable;
 		dirty = true;
 	}
 
-	public ArrayList<Integer> getInformed() {
+	public ForeignCollection<Person> getInformed() {
 		return informed;
 	}
 
-	public void setInformed(ArrayList<Integer> informed) {
+	public void setInformed(ForeignCollection<Person> informed) {
 		this.informed = informed;
 		dirty = true;
 	}
 
-	public ArrayList<Integer> getConsulted() {
+	public ForeignCollection<Person> getConsulted() {
 		return consulted;
 	}
 
-	public void setConsulted(ArrayList<Integer> consulted) {
+	public void setConsulted(ForeignCollection<Person> consulted) {
 		this.consulted = consulted;
 		dirty = true;
 	}
 	
 	// add methods
-	public ArrayList<Integer> addChildIds(int id) {
+	/*
+	public ForeignCollection<Person> addChildIds(int id) {
 		this.childIds.add(id);
 		dirty = true;
 		return this.childIds;
 	}
 
-	public ArrayList<Integer> addResponsible(int id) {
+	public ForeignCollection<Person> addResponsible(int id) {
 		this.responsible.add(id);
 		dirty = true;
 		return this.responsible;
 	}
 
-	public ArrayList<Integer> addAccountable(int id) {
+	public ForeignCollection<Person> addAccountable(int id) {
 		this.accountable.add(id);
 		dirty = true;
 		return this.accountable;
 	}
 
-	public ArrayList<Integer> addInformed(int id) {
+	public ForeignCollection<Person> addInformed(int id) {
 		this.informed.add(id);
 		dirty = true;
 		return this.informed;
 	}
 
-	public ArrayList<Integer> addConsulted(int id) {
+	public ForeignCollection<Person> addConsulted(int id) {
 		this.consulted.add(id);
 		dirty = true;
 		return this.consulted;
 	}
+	*/
 
 	@Override
 	public String toString() {
