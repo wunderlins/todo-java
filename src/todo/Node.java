@@ -23,7 +23,7 @@ public class Node extends Database {
 	public Node() {
 		id = -1;
 		name = "";
-		parent = 0;
+		parent = -1;
 		numChildren = 0;
 		children = new ArrayList<>();
 		dirty = true;
@@ -32,7 +32,7 @@ public class Node extends Database {
 	/**
 	 * fetch a node object
 	 * <p>
-	 * default to root node. The root nodes id is always 0.
+	 * The root nodes id is always 0.
 	 * @throws Exception 
 	 */
 	public Node(int id) {
@@ -51,6 +51,30 @@ public class Node extends Database {
 				this.id = -2;
 				this.name = "";
 			}
+		}
+		
+		// load root node children count. We need to do this here, because it is never laded 
+		// from the database
+		if(this.id == 0) {
+			ResultSet rs;
+			try {
+				rs = stmt.executeQuery("SELECT count(id) as numChildren FROM node WHERE parent=0;");
+				this.numChildren = rs.getInt("numChildren");
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void setNode(int id, String name, int parent) {
+		this.id = id;
+		this.name = name;
+		this.parent = parent;
+		System.out.println(this);
+		try {
+			store();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -158,8 +182,8 @@ public class Node extends Database {
 	
 	@Override
 	public String[] createSql() {
-		String[] sqls = {"CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL, parent INTEGER DEFAULT 0);",
-		                 "CREATE TABLE IF NOT EXISTS node2node (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL, child INTEGER NOT NULL);"};
+		String[] sqls = {"CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL, parent INTEGER DEFAULT 0);"};
+		                 //"CREATE TABLE IF NOT EXISTS node2node (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL, child INTEGER NOT NULL);"};
 		return sqls;
 	}
 
@@ -178,14 +202,27 @@ public class Node extends Database {
 		this.name = name;
 	}
 	
-	public int getParent() {
-		return parent;
+	public int getParentId() {
+		return this.parent;
+	}
+	
+	public Node getParent() throws Exception {
+		if (this.parent == -1) {
+			throw new Exception("Root node has no parent.");
+		}
+		return new Node(this.parent);
 	}
 	
 	public void setParent(int parent) {
 		if (parent != this.parent)
 			dirty = true;
 		this.parent = parent;
+	}
+	
+	public void setParent(Node parent) {
+		if (parent.getId() != this.parent)
+			dirty = true;
+		this.parent = parent.getId();
 	}
 	
 	public ArrayList<Node> getChildren() throws SQLException {
@@ -212,6 +249,8 @@ public class Node extends Database {
 			children.add(n);
 		}
 		
+		numChildren = children.size();
+		childrenLoaded = true;
 		return children;
 	}
 	

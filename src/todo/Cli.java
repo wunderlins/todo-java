@@ -1,6 +1,7 @@
 package todo;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.io.File;
 
 public class Cli {
@@ -23,7 +24,7 @@ public class Cli {
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		
 		// remove Database file
 		reset();
@@ -41,11 +42,7 @@ public class Cli {
 			Node n1 = new Node();
 			n1.setName(String.valueOf(i) + " element");
 			n1.setParent(parent);
-			try {
-				n1.store();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+			n1.store();
 			System.out.println(n1);
 			parent = n1.getId();
 		}
@@ -54,64 +51,62 @@ public class Cli {
 		n = new Node(9);
 		n.setName("i am a new name");
 		n.setParent(0);
-		try {
-			n.store();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		n.store();
+		
 		n = new Node(9);
 		System.out.println(n);
 		
 		// delete 10
 		n = new Node(10);
-		try {
-			n.delete();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		n.delete();
 		System.out.println(n);
 		
 		n = new Node(10);
 		System.out.println(n);
 		
 		// move 7/8/9 to be a child of 1
-		try {
-			n = new Node(7);
-			n.setParent(1);
-			n.store();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		try {
-			n = new Node(8);
-			n.setParent(1);
-			n.store();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		try {
-			n = new Node(9);
-			n.setParent(1);
-			n.store();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		try {
-			n = new Node(2);
-			n.setParent(8);
-			n.store();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		n = new Node(7);
+		n.setParent(1);
+		n.store();
+
+		n = new Node(8);
+		n.setParent(1);
+		n.store();
+
+		n = new Node(9);
+		n.setParent(1);
+		n.store();
+
+		n = new Node(2);
+		n.setParent(8);
+		n.store();
 		
+		// create new node
+		n = new Node();
+		n.setNode(12, "12th", 1);
+
 		// get all children of root node
 		n = new Node(1);
-		try {
-			System.out.println(n.getChildren());
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		System.out.println(n.getChildren());
+		
+		
+		ArrayList<Node> c = new ArrayList<>();
+		c = n.getChildren();
+		
+		for (Node nr: c) {
+			nr.setName(nr.getName() + " ------");
+			nr.store();
+			System.out.println(nr);
 		}
+		
+		// traverse to root from a node via getParent();
+		System.out.println("=================");
+		n = new Node(2);
+		do {
+			System.out.println(n);
+			n = n.getParent();
+		} while (n.getParentId() != -1);
+		System.out.println(n);
 	}
 
 }
