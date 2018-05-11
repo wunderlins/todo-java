@@ -28,9 +28,9 @@ public abstract class Database {
 		conn.close();
 	}
 	
-	public void load() {}
+	public void load() throws SQLException {}
 	
-	public void store() {}
+	public void store() throws SQLException {}
 	
 	public void createTable() {
 		execute(createSql());

@@ -1,5 +1,6 @@
 package todo;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -10,7 +11,9 @@ public class Node extends Database {
 	private int id;
 	private String name;
 	private int parent;
-	private ArrayList<Integer> children;
+	private int numChildren;
+	private ArrayList<Node> children;
+	private boolean childrenLoaded = false;
 	
 	/**
 	 * create a node object
@@ -21,6 +24,7 @@ public class Node extends Database {
 		id = -1;
 		name = "";
 		parent = 0;
+		numChildren = 0;
 		children = new ArrayList<>();
 	}
 	
@@ -30,67 +34,98 @@ public class Node extends Database {
 	 * default to root node. The root nodes id is always 0.
 	 */
 	public Node(int id) {
-		id = 0;
-		name = "Root";
-		parent = -1;
-		children = new ArrayList<>();
+		this.id = 0;
+		this.name = "Root";
+		this.parent = -1;
+		numChildren = 0;
+		this.children = new ArrayList<>();
 		
 		if (id > 0) {
 			this.id = id;
-			load();
-		}
-	}
-	
-	@Override
-	public void store() {
-		if (!dirty)
-			return;
-		
-		String[] sqls = insertSql();
-		ResultSet res;
-		for (String sql: sqls) {
 			try {
-				stmt.execute(sql);
-				
-				
+				load();
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	@Override
+	public void load() throws SQLException {
+		super.load();
+		String[] loadSql = loadSql();
+		PreparedStatement loadStmt;
+		ResultSet rs = null;
+		//System.out.println(id);
+
+		loadStmt = conn.prepareStatement(loadSql[0]);
+		loadStmt.setInt(1, this.id);
+		loadStmt.setInt(2, this.id);
+		rs  = loadStmt.executeQuery();
 		
-		try {
+		this.name        = rs.getString("name");
+		this.parent      = rs.getInt("parent");
+		this.numChildren = rs.getInt("numChildren");
+	}
+
+	@Override
+	public void store() throws SQLException {
+		super.store();
+		
+		if (!dirty)
+			return;
+		
+		if (id == -1) { // insert
+			String[] sqls = insertSql();
+			ResultSet res;
+			for (String sql: sqls) {
+				stmt.execute(sql);
+			}
+			
 			res = stmt.executeQuery("SELECT MAX(ID) as id FROM node;");
 			this.id = res.getInt("id");
 			this.dirty = false;
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} else { // update
+			String[] sqls = updateSql();
+			PreparedStatement loadStmt;
+			loadStmt = conn.prepareStatement(sqls[0]);
+			System.out.println(sqls[0]);
+			System.out.println(this);
+			loadStmt.setString(1, this.name);
+			loadStmt.setInt(2, this.parent);
+			loadStmt.setInt(3, this.id);
+			loadStmt.execute();
 		}
+		
 	}
 
 	@Override
 	public String[] loadSql() {
-		String[] sqls = {"SELECT * FROM node WHERE id=?;"};
+		String[] sqls = {"SELECT id, name, parent, (SELECT count(id) FROM node WHERE parent=?) as numChildren "
+		               + "FROM node WHERE id=?;"};
 		return sqls;
 	}
 
 	@Override
 	public String[] insertSql() {
 		String[] sqls = {
-			"INSERT INTO node (name) VALUES ('"+name+"')"
+			"INSERT INTO node (name, parent) VALUES ('"+name+"', "+String.valueOf(parent)+");"
 		};
 		return sqls;
 	}
 	
 	@Override
 	public String[] updateSql() {
-		String[] sqls = {};
+		String[] sqls = {
+			"UPDATE node SET name=?, parent=? WHERE id=?;"
+		};
 		return sqls;
 	}
 	
 	@Override
 	public String[] createSql() {
-		String[] sqls = {"CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL);",
+		String[] sqls = {"CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL, parent INTEGER DEFAULT 0);",
 		                 "CREATE TABLE IF NOT EXISTS node2node (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL, child INTEGER NOT NULL);"};
 		return sqls;
 	}
@@ -99,14 +134,6 @@ public class Node extends Database {
 	public int getId() {
 		return id;
 	}
-	
-	/* user should not be able to create ids
-	public void setId(int id) {
-		if (id != this.id)
-			dirty = true;
-		this.id = id;
-	}
-	*/
 	
 	public String getName() {
 		return name;
@@ -128,17 +155,17 @@ public class Node extends Database {
 		this.parent = parent;
 	}
 	
-	public ArrayList<Integer> getChildren() {
+	public ArrayList<Node> getChildren() {
 		return children;
 	}
 	
-	public void setChildren(ArrayList<Integer> children) {
+	public void setChildren(ArrayList<Node> children) {
 		this.children = children;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("Node [{%s} '%s', parent=%s, children=%s, %s]", id, name, parent, children.size(), dirty);
+		return String.format("Node [{%s} '%s', parent=%s, children=%s, %s]", id, name, parent, numChildren, dirty);
 	}
 
 	
