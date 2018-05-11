@@ -2,16 +2,15 @@ package todo;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 
 public class Node extends Database {
 	
 	// item properties
-	protected int id;
-	protected String name;
-	protected int parent;
-	protected ArrayList<Integer> children;
+	private int id;
+	private String name;
+	private int parent;
+	private ArrayList<Integer> children;
 	
 	/**
 	 * create a node object
@@ -44,7 +43,11 @@ public class Node extends Database {
 	
 	@Override
 	public void store() {
+		if (!dirty)
+			return;
+		
 		String[] sqls = insertSql();
+		ResultSet res;
 		for (String sql: sqls) {
 			try {
 				stmt.execute(sql);
@@ -54,6 +57,14 @@ public class Node extends Database {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+		
+		try {
+			res = stmt.executeQuery("SELECT MAX(ID) as id FROM node;");
+			this.id = res.getInt("id");
+			this.dirty = false;
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -123,6 +134,11 @@ public class Node extends Database {
 	
 	public void setChildren(ArrayList<Integer> children) {
 		this.children = children;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("Node [{%s} '%s', parent=%s, children=%s, %s]", id, name, parent, children.size(), dirty);
 	}
 
 	
