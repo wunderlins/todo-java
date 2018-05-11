@@ -7,10 +7,13 @@ import java.sql.Statement;
 
 public abstract class Database {
 	static protected String url = "";
-	Connection conn = null;
-	Statement stmt = null;
+	static Connection conn = null;
+	static Statement stmt = null;
 
-	public void open(String db_file) throws SQLException {
+	protected boolean loaded = false;
+	protected boolean dirty = false;
+	
+	public static void open(String db_file) throws SQLException {
 		url = "jdbc:sqlite:" + db_file;
 		
 		try {
@@ -18,14 +21,6 @@ public abstract class Database {
 			stmt = conn.createStatement();
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
-		} finally {
-			try {
-				if (conn != null) {
-			    	conn.close();
-			    }
-			} catch (SQLException ex) {
-				System.out.println(ex.getMessage());
-			}
 		}
 	}
 	
@@ -33,7 +28,31 @@ public abstract class Database {
 		conn.close();
 	}
 	
-	public abstract void load();
-	public abstract void store();
-	public abstract void create();
+	public void load() {}
+	
+	public void store() {}
+	
+	public void createTable() {
+		execute(createSql());
+	}
+	
+	protected void execute(String sql) {
+		System.out.println(sql);
+		try {
+			stmt.execute(sql);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	protected void execute(String[] sqls) {
+		for(String sql:sqls) {
+			execute(sql);
+		}
+	}
+	
+	public abstract String[] loadSql();
+	public abstract String[] insertSql();
+	public abstract String[] updateSql();
+	public abstract String[] createSql();
 }
