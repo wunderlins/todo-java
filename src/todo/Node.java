@@ -90,8 +90,6 @@ public class Node extends Database {
 			String[] sqls = updateSql();
 			PreparedStatement loadStmt;
 			loadStmt = conn.prepareStatement(sqls[0]);
-			System.out.println(sqls[0]);
-			System.out.println(this);
 			loadStmt.setString(1, this.name);
 			loadStmt.setInt(2, this.parent);
 			loadStmt.setInt(3, this.id);
