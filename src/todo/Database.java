@@ -28,9 +28,9 @@ public abstract class Database {
 		conn.close();
 	}
 	
-	public void load() throws SQLException {}
-	
+	public void load() throws SQLException, Exception {}
 	public void store() throws SQLException {}
+	public void delete() throws SQLException {}
 	
 	public void createTable() {
 		execute(createSql());
@@ -55,4 +55,6 @@ public abstract class Database {
 	public abstract String[] insertSql();
 	public abstract String[] updateSql();
 	public abstract String[] createSql();
+	public abstract String[] deleteSql();
+
 }

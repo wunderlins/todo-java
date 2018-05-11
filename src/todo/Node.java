@@ -26,12 +26,14 @@ public class Node extends Database {
 		parent = 0;
 		numChildren = 0;
 		children = new ArrayList<>();
+		dirty = true;
 	}
 	
 	/**
 	 * fetch a node object
 	 * <p>
 	 * default to root node. The root nodes id is always 0.
+	 * @throws Exception 
 	 */
 	public Node(int id) {
 		this.id = 0;
@@ -44,15 +46,22 @@ public class Node extends Database {
 			this.id = id;
 			try {
 				load();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (Exception e) {
+				//System.out.println("Object with id " +String.valueOf(id)+ " not found in the Database");
+				this.id = -2;
+				this.name = "";
 			}
 		}
 	}
 	
+	public boolean isValis() {
+		if (this.id == -2)
+			return false;
+		return true;
+	}
+	
 	@Override
-	public void load() throws SQLException {
+	public void load() throws Exception {
 		super.load();
 		String[] loadSql = loadSql();
 		PreparedStatement loadStmt;
@@ -64,11 +73,17 @@ public class Node extends Database {
 		loadStmt.setInt(2, this.id);
 		rs  = loadStmt.executeQuery();
 		
-		this.name        = rs.getString("name");
-		this.parent      = rs.getInt("parent");
-		this.numChildren = rs.getInt("numChildren");
+		try {
+			this.name        = rs.getString("name");
+			this.parent      = rs.getInt("parent");
+			this.numChildren = rs.getInt("numChildren");
+		} catch (Exception e) {
+			throw new Exception("Node "+String.valueOf(this.id)+" no found");
+		}
+		
+		this.dirty = false;
 	}
-
+	
 	@Override
 	public void store() throws SQLException {
 		super.store();
@@ -96,6 +111,26 @@ public class Node extends Database {
 			loadStmt.execute();
 		}
 		
+	}
+	
+	@Override
+	public void delete() throws SQLException {
+		String[] sqls = deleteSql();
+		PreparedStatement deleteStmt;
+		for (String sql: sqls) {
+			deleteStmt = conn.prepareStatement(sql);
+			deleteStmt.setInt(1, this.id);
+			deleteStmt.execute();
+		}
+		this.id = -1;
+		this.dirty = true;
+		System.gc();
+	}
+
+	@Override
+	public String[] deleteSql() {
+		String[] sqls = {"DELETE FROM node WHERE id=?;"};
+		return sqls;
 	}
 
 	@Override
@@ -153,7 +188,30 @@ public class Node extends Database {
 		this.parent = parent;
 	}
 	
-	public ArrayList<Node> getChildren() {
+	public ArrayList<Node> getChildren() throws SQLException {
+		
+		if (childrenLoaded)
+			return children;
+		
+		String sql = "SELECT no.id, no.name, no.parent, (SELECT count(n.id) FROM node n WHERE parent=no.id) as numChildren "
+		           + "FROM node no WHERE no.parent=?;";
+		
+		PreparedStatement loadStmt;
+		loadStmt = conn.prepareStatement(sql);
+		loadStmt.setInt(1, this.id);
+		ResultSet rs = loadStmt.executeQuery();
+		
+		while (rs.next()) {
+			Node n = new Node();
+			n.id = rs.getInt("id");
+			n.name = rs.getString("name");
+			n.parent = rs.getInt("parent");
+			n.numChildren = rs.getInt("numChildren");
+			n.dirty = false;
+			
+			children.add(n);
+		}
+		
 		return children;
 	}
 	
