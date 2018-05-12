@@ -137,8 +137,30 @@ public class Node extends Database {
 		
 	}
 	
+	/**
+	 * Delete a node from the Database
+	 * <p>
+	 * This method is remove a node from the database. If the node still has children, then they will be moved 
+	 * to the parent of this node. If you want the children to be deleted or assigned to another node, you must 
+	 * make sure to move or delete them before deleting this node.
+	 *  
+	 * @throws SQLException
+	 */
 	@Override
 	public void delete() throws SQLException {
+		
+		// make sure this object has not children, otherwise they will be orphaned
+		// when we destroy it's parent. Move all children to the parent of the current object.
+		// worst case this means the children will be reassigned to the root object.
+		ArrayList<Node> c = getChildren(false);
+		if (c.size() > 0) {
+			int p = getParentId();
+			for (Node child: c) {
+				child.setParent(p);
+				child.store();
+			}
+		}
+		
 		String[] sqls = deleteSql();
 		PreparedStatement deleteStmt;
 		for (String sql: sqls) {
@@ -148,7 +170,6 @@ public class Node extends Database {
 		}
 		this.id = -1;
 		this.dirty = true;
-		System.gc();
 	}
 
 	@Override
@@ -225,9 +246,38 @@ public class Node extends Database {
 		this.parent = parent.getId();
 	}
 	
+	/**
+	 * Fetch all children of a node
+	 * <p>
+	 * This is a convenience function of {@link Node#getChildren(boolean)}. Use this if you want
+	 * to work with cached objects.
+	 * 
+	 * @return
+	 * @throws SQLException
+	 * @see Node#getChildren(boolean)
+	 */
 	public ArrayList<Node> getChildren() throws SQLException {
+		return getChildren(true);
+	}
 		
-		if (childrenLoaded)
+	/**
+	 * Read child nodes from database
+	 * <p>
+	 * This method fetches all children as Node objects. The method uses a caching mechanism. After the first
+	 * read is done, {@link #childrenLoaded} is set to true. This is to prevent a lot of database operations on 
+	 * Nodes with many Children.
+	 * <p>
+	 * To force a reload from the database on every call, set the parameter `useCache` to true.
+	 * 
+	 * @param useCache if true, force reload from database. Objects are cached in this.children
+	 * @return
+	 * @throws SQLException
+	 * @see #childrenLoaded
+	 * @see #children
+	 */
+	public ArrayList<Node> getChildren(boolean useCache) throws SQLException {
+		
+		if (childrenLoaded && useCache)
 			return children;
 		
 		String sql = "SELECT no.id, no.name, no.parent, (SELECT count(n.id) FROM node n WHERE parent=no.id) as numChildren "
