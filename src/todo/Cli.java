@@ -81,9 +81,11 @@ public class Cli {
 		n.setParent(8);
 		n.store();
 		
+		/*
 		// create new node
 		n = new Node();
 		n.setNode(12, "12th", 1);
+		*/
 
 		// get all children of root node
 		n = new Node(1);

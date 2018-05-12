@@ -5,20 +5,130 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+/**
+ * Store hirarchial data in sqlite
+ * <p>
+ * The Node class implements a hirarchic datastore. A node may have always one parent and zero to many children. 
+ * Every node has a parent. There is a special node with id == 0 which is the root node. It is a special node 
+ * because it has no representation in the database. You can change the Roots name with 
+ * {@link #setRootNodeName(String)}.
+ * <p>
+ * Example usage. Create a node:
+ * {@code
+ * Node n = new Node(); 
+ * }
+ * This will create a new node. It will be empty and have an id that is -1. An id with -1 means the node 
+ * has not been committed, there is no representation of it in the database.
+ * <p>
+ * Create a node, add a child and commit it
+ * {@code
+ * Node n = new Node();
+ * n.setName("my name");
+ * n.setPartent(0); // make the root node the parent
+ * n.store();
+ * Node n1 = new Node();
+ * n1.setName("I am a child");
+ * n1.setParent(n); // this will fail if n has not been stored. because n will have an -1 id.
+ * n1.commit();
+ * }
+ * <p>
+ * Fetch an existing object, get it's parent and children:
+ * {@code
+ * Node n = new Node(2);
+ * Node n1 = new Node(n.getParentId()); // fetch the parent Node of the object
+ * if (n1.hasChildren()) &#123;
+ *     ArrayList<Node> nl = n1.getChildren(); // fetch a list of child Nodes
+ * &#125;
+ * }
+ * 
+ * @author Simon Wunderlin
+ */
 public class Node extends Database {
 	
 	// item properties
+	/**
+	 * The primary key of an item. -1 is uncommitted. -2 means error while storing. 0 is the root node
+	 * and every other positive integer is a node loaded from the database.  
+	 */
 	private int id;
+	
+	/**
+	 * The name property.
+	 */
 	private String name;
+	
+	/**
+	 * A reference to the parent node. This points to the parents {@link #id}
+	 */
 	private int parent;
+	
+	/**
+	 * number of children.
+	 * <p> 
+	 * The object is lazy loaded. Children are not available during load but the numChildren is
+	 * populated when a node is fetched.
+	 * 
+	 * @see #hasChildren() 
+	 * @see #children
+	 * @see #getChildren()
+	 */
 	private int numChildren;
+	
+	/**
+	 * List containing all child nodes
+	 * <p>
+	 * This list is not loaded when the node is created. you have to specifically call 
+	 * {@link #getChildren()}. {@link #childrenLoaded} will keep the state if the children have been loaded. 
+	 * <p>
+	 * Be aware that after loading the children from the database, this list is cached in memory. 
+	 * To explicitly reload the list again, you must call getChildren(false) to circumvent the local cache.
+	 * 
+	 * @see #getChildren()
+	 * @see #getChildren(boolean)
+	 * @see #hasChildren()
+	 * @see #childrenLoaded
+	 */
 	private ArrayList<Node> children;
+	
+	/**
+	 * state of the children
+	 * <p>
+	 * children are loaded lazily. This is set to true once {@link #getChildren()} has been called once.
+	 * 
+	 * @see #getChildren()
+	 * @see #getChildren(boolean)
+	 * @see #children
+	 * @see #numChildren
+	 */
 	private boolean childrenLoaded = false;
+	
+	/**
+	 * The name of the root node
+	 * <p>
+	 * This is the name of a special node called root with id 0. it is not represented in the database. This variable 
+	 * makes it possible to give it a different name than the default which is "Root".
+	 * 
+	 * @see #setRootNodeName(String)
+	 */
+	private String rootNodeName = "Root";
+	
+	/**
+	 * Set the display name of the Root node
+	 * 
+	 * @param name
+	 */
+	public void setRootNodeName(String name) {
+		this.rootNodeName = name;
+	}
 	
 	/**
 	 * create a node object
 	 * <p>
-	 * default to root node. id -1 means the db object does not yet exist
+	 * default to root node. id -1 means the db object does not yet exist. after the first commit, the object's
+	 * id will be updated with the generated database id.
+	 * 
+	 * @see #store()
+	 * @see #insert()
 	 */
 	public Node() {
 		id = -1;
@@ -30,14 +140,16 @@ public class Node extends Database {
 	}
 	
 	/**
-	 * fetch a node object
+	 * fetch a node object by id
 	 * <p>
-	 * The root nodes id is always 0.
+	 * The root nodes id is always 0. If the node can not be found in the database, the returning object will have 
+	 * and id of -2.
+	 * 
 	 * @throws Exception 
 	 */
 	public Node(int id) {
 		this.id = 0;
-		this.name = "Root";
+		this.name = rootNodeName;
 		this.parent = -1;
 		numChildren = 0;
 		this.children = new ArrayList<>();
@@ -66,11 +178,20 @@ public class Node extends Database {
 		}
 	}
 	
-	public void setNode(int id, String name, int parent) {
+	/**
+	 * Update a node
+	 * <p>
+	 * This is a convince function which will create and store the new node.
+	 *  
+	 * @param id
+	 * @param name
+	 * @param parent
+	 */
+	private void setNode(int id, String name, int parent) {
 		this.id = id;
 		this.name = name;
 		this.parent = parent;
-		System.out.println(this);
+		//System.out.println(this);
 		try {
 			store();
 		} catch (SQLException e) {
@@ -78,24 +199,39 @@ public class Node extends Database {
 		}
 	}
 	
-	public boolean isValis() {
+	/**
+	 * Checks if a Node has children
+	 * 
+	 * @return
+	 */
+	public boolean hasChildren() {
+		if (numChildren > 0)
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Check if the node is still valid
+	 * <p>
+	 * if something went wrong, the node's id will be changed to -2. This method checks if the node is still 
+	 * in sync with the database.
+	 * 
+	 * @return
+	 */
+	public boolean isValid() {
 		if (this.id == -2)
 			return false;
 		return true;
 	}
 	
+	/**
+	 * load metadata for an object from the database
+	 * 
+	 * @see todo.Database#load()
+	 */
 	@Override
 	public void load() throws Exception {
 		super.load();
-		String[] loadSql = loadSql();
-		PreparedStatement loadStmt;
-		ResultSet rs = null;
-		//System.out.println(id);
-
-		loadStmt = conn.prepareStatement(loadSql[0]);
-		loadStmt.setInt(1, this.id);
-		loadStmt.setInt(2, this.id);
-		rs  = loadStmt.executeQuery();
 		
 		try {
 			this.name        = rs.getString("name");
@@ -108,6 +244,17 @@ public class Node extends Database {
 		this.dirty = false;
 	}
 	
+	/**
+	 * Commit the current state to database
+	 * <p>
+	 * This function stores the current object. It will decide if the object has to be created 
+	 * or if it will be updated. 
+	 * <p>
+	 * if the database is not dirty, then the operation will not store anything to the database
+	 * 
+	 * @see todo.Database#dirty
+	 * @see todo.Database#store()
+	 */
 	@Override
 	public void store() throws SQLException {
 		super.store();
@@ -115,28 +262,43 @@ public class Node extends Database {
 		if (!dirty)
 			return;
 		
-		if (id == -1) { // insert
-			String[] sqls = insertSql();
-			ResultSet res;
-			for (String sql: sqls) {
-				stmt.execute(sql);
-			}
-			
-			res = stmt.executeQuery("SELECT MAX(ID) as id FROM node;");
-			this.id = res.getInt("id");
-			this.dirty = false;
-		} else { // update
-			String[] sqls = updateSql();
-			PreparedStatement loadStmt;
-			loadStmt = conn.prepareStatement(sqls[0]);
-			loadStmt.setString(1, this.name);
-			loadStmt.setInt(2, this.parent);
-			loadStmt.setInt(3, this.id);
-			loadStmt.execute();
+		if (id == -1) {
+			insert();
+		} else {
+			update();
 		}
 		
 	}
-	
+
+	/**
+	 * store a new object to the database
+	 * <p>
+	 * the {@link #id} is always auto generated, no matter what it has been set to. New objects are supposed to 
+	 * have an id == -1 before committing to the database. 
+	 * <p>
+	 * after an successful commit, the newly generated id will be fetched and stored in the objects {@link #id}
+	 * property.
+	 * <p>
+	 * After a successful commit the {@link todo.Database#dirty} flag will be set to false.
+	 * 
+	 * @see todo.Database#insert()
+	 */
+	@Override
+	public void insert() throws SQLException {
+		super.insert();
+		
+		ResultSet res;
+		res = stmt.executeQuery("SELECT MAX(ID) as id FROM node;");
+		this.id = res.getInt("id");
+		
+		this.dirty = false;
+	}
+
+	@Override
+	public void update() throws SQLException {
+		super.update();
+	}
+
 	/**
 	 * Delete a node from the Database
 	 * <p>
@@ -156,56 +318,112 @@ public class Node extends Database {
 		if (c.size() > 0) {
 			int p = getParentId();
 			for (Node child: c) {
-				child.setParent(p);
+				try {
+					child.setParent(p);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 				child.store();
 			}
 		}
 		
-		String[] sqls = deleteSql();
-		PreparedStatement deleteStmt;
-		for (String sql: sqls) {
-			deleteStmt = conn.prepareStatement(sql);
-			deleteStmt.setInt(1, this.id);
-			deleteStmt.execute();
-		}
+		super.delete();
 		this.id = -1;
 		this.dirty = true;
 	}
 
+	/**
+	 * create a prepared statement for fetching a record 
+	 * 
+	 * @see todo.Database#loadStmt()
+	 */
 	@Override
-	public String[] deleteSql() {
-		String[] sqls = {"DELETE FROM node WHERE id=?;"};
-		return sqls;
-	}
-
-	@Override
-	public String[] loadSql() {
-		String[] sqls = {"SELECT id, name, parent, (SELECT count(id) FROM node WHERE parent=?) as numChildren "
-		               + "FROM node WHERE id=?;"};
-		return sqls;
-	}
-
-	@Override
-	public String[] insertSql() {
-		String[] sqls = {
-			"INSERT INTO node (name, parent) VALUES ('"+name+"', "+String.valueOf(parent)+");"
-		};
-		return sqls;
-	}
-	
-	@Override
-	public String[] updateSql() {
-		String[] sqls = {
-			"UPDATE node SET name=?, parent=? WHERE id=?;"
-		};
-		return sqls;
+	public PreparedStatement loadStmt() {
+		PreparedStatement loadStmt = null;
+		String sql = "SELECT id, name, parent, (SELECT count(id) FROM node WHERE parent=?) as numChildren "
+	               + "FROM node WHERE id=?;";
+		try {
+			loadStmt = conn.prepareStatement(sql);
+			loadStmt.setInt(1, this.id);
+			loadStmt.setInt(2, this.id);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return loadStmt;
 	}
 	
+	/**
+	 * create a prepared statement for updating a record
+	 * 
+	 * @see todo.Database#updateStmt()
+	 */
 	@Override
-	public String[] createSql() {
-		String[] sqls = {"CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL, parent INTEGER DEFAULT 0);"};
-		                 //"CREATE TABLE IF NOT EXISTS node2node (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL, child INTEGER NOT NULL);"};
-		return sqls;
+	public PreparedStatement updateStmt() {
+		PreparedStatement updateStmt = null;
+		try {
+			updateStmt = conn.prepareStatement("UPDATE node SET name=?, parent=? WHERE id=?;");
+			updateStmt.setString(1, this.name);
+			updateStmt.setInt(2, this.parent);
+			updateStmt.setInt(3, this.id);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return updateStmt;
+	}
+	
+	/**
+	 * create a prepared statement for inserting a record
+	 * 
+	 * @see todo.Database#insertStmt()
+	 */
+	@Override
+	public PreparedStatement insertStmt() {
+		PreparedStatement insertStmt = null;
+		try {
+			insertStmt = conn.prepareStatement("INSERT INTO node (name, parent) VALUES (?, ?);");
+			insertStmt.setString(1, this.name);
+			insertStmt.setInt(2, this.parent);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return insertStmt;
+	}
+	
+	/**
+	 * create a prepared statement for deleting a record
+	 * 
+	 * @see todo.Database#deleteStmt()
+	 */
+	@Override
+	public PreparedStatement deleteStmt() {
+		PreparedStatement deleteStmt = null;
+		try {
+			deleteStmt = conn.prepareStatement("DELETE FROM node WHERE id=?;");
+			deleteStmt.setInt(1, this.id);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return deleteStmt;
+	}
+	
+	/**
+	 * create a prepared statement for creating the table
+	 * 
+	 * @see todo.Database#createStmt()
+	 */
+	@Override
+	public PreparedStatement createStmt() {
+		PreparedStatement createStmt = null;
+		String sql = "CREATE TABLE IF NOT EXISTS node (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL, "
+				   + "parent INTEGER DEFAULT 0);";
+		try {
+			createStmt = conn.prepareStatement(sql);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return createStmt;
 	}
 
 	// getters and setters
@@ -234,13 +452,45 @@ public class Node extends Database {
 		return new Node(this.parent);
 	}
 	
-	public void setParent(int parent) {
+	/**
+	 * Set the parent by Id
+	 * <p>
+	 * This operation will fail if the parent's id is -1 or -2
+	 * 
+	 * @param parent
+	 * @throws Exception
+	 */
+	public void setParent(int parent) throws Exception {
+		if (parent == -1) {
+			throw new Exception("You are trying to set a parent that has not been committed (parent id -1).");
+		}
+		
+		if (parent == -2) {
+			throw new Exception("You are trying to set a parent that is Invalid (parent id -2).");
+		}
+		
 		if (parent != this.parent)
 			dirty = true;
 		this.parent = parent;
 	}
 	
-	public void setParent(Node parent) {
+	/**
+	 * Set the parent by Node
+	 * <p>
+	 * This operation will fail if the parent's id is -1 or -2
+	 * 
+	 * @param parent
+	 * @throws Exception
+	 */
+	public void setParent(Node parent) throws Exception {
+		if (parent.getId() == -1) {
+			throw new Exception("You are trying to set a parent that has not been committed (parent id -1).");
+		}
+		
+		if (parent.getId() == -2) {
+			throw new Exception("You are trying to set a parent that is Invalid (parent id -2).");
+		}
+		
 		if (parent.getId() != this.parent)
 			dirty = true;
 		this.parent = parent.getId();
@@ -304,7 +554,14 @@ public class Node extends Database {
 		return children;
 	}
 	
+	/**
+	 * update children
+	 * 
+	 * @param children
+	 */
 	public void setChildren(ArrayList<Node> children) {
+		// FIXME: this should update all children's parents
+		// FIXME: new objects added to this list need to be committed
 		this.children = children;
 	}
 
@@ -313,5 +570,4 @@ public class Node extends Database {
 		return String.format("Node [{%s} '%s', parent=%s, children=%s, %s]", id, name, parent, numChildren, dirty);
 	}
 
-	
 }

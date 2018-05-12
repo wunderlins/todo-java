@@ -2,6 +2,8 @@ package todo;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -12,6 +14,7 @@ public abstract class Database {
 
 	protected boolean loaded = false;
 	protected boolean dirty = false;
+	protected ResultSet rs = null;
 	
 	public static void open(String db_file) throws SQLException {
 		url = "jdbc:sqlite:" + db_file;
@@ -28,33 +31,32 @@ public abstract class Database {
 		conn.close();
 	}
 	
-	public void load() throws SQLException, Exception {}
+	public void load() throws SQLException, Exception {
+		rs = loadStmt().executeQuery();
+	}
+	
 	public void store() throws SQLException {}
-	public void delete() throws SQLException {}
 	
-	public void createTable() {
-		execute(createSql());
+	public void insert() throws SQLException {
+		insertStmt().execute();
 	}
 	
-	protected void execute(String sql) {
-		System.out.println(sql);
-		try {
-			stmt.execute(sql);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public void update() throws SQLException {
+		updateStmt().execute();
 	}
 	
-	protected void execute(String[] sqls) {
-		for(String sql:sqls) {
-			execute(sql);
-		}
+	public void delete() throws SQLException {
+		deleteStmt().execute();
 	}
 	
-	public abstract String[] loadSql();
-	public abstract String[] insertSql();
-	public abstract String[] updateSql();
-	public abstract String[] createSql();
-	public abstract String[] deleteSql();
+	public void createTable() throws SQLException {
+		createStmt().execute();
+	}
+	
+	public abstract PreparedStatement deleteStmt();
+	public abstract PreparedStatement loadStmt();
+	public abstract PreparedStatement insertStmt();
+	public abstract PreparedStatement updateStmt();
+	public abstract PreparedStatement createStmt();
 
 }
