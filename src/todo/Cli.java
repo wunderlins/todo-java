@@ -34,6 +34,8 @@ public class Cli {
 		// create tables
 		Node n = new Node();
 		n.createTable();
+		Node.setRootNodeName("I have many children");
+		n = Node.getRootNode();
 		
 		// generate 10 dummy objects
 		int parent = 0;

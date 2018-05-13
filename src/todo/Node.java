@@ -110,15 +110,15 @@ public class Node extends Database {
 	 * 
 	 * @see #setRootNodeName(String)
 	 */
-	private String rootNodeName = "Root";
+	private static String rootNodeName = "Root";
 	
 	/**
 	 * Set the display name of the Root node
 	 * 
 	 * @param name
 	 */
-	public void setRootNodeName(String name) {
-		this.rootNodeName = name;
+	public static void setRootNodeName(String name) {
+		rootNodeName = name;
 	}
 	
 	/**
@@ -176,6 +176,21 @@ public class Node extends Database {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	/**
+	 * get the root node
+	 * <p>
+	 * this is a convenice function to fetch the root node.
+	 * <p>
+	 * This the same as
+	 * {@code
+	 * Node n = new Node(0);
+	 * } 
+	 * @return
+	 */
+	public static Node getRootNode() {
+		return new Node(0);
 	}
 	
 	/**
@@ -563,6 +578,15 @@ public class Node extends Database {
 		// FIXME: this should update all children's parents
 		// FIXME: new objects added to this list need to be committed
 		this.children = children;
+	}
+
+	/**
+	 * get the number of children of a node
+	 * 
+	 * @return
+	 */
+	public int getNumChildren() {
+		return numChildren;
 	}
 
 	@Override

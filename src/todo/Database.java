@@ -20,6 +20,12 @@ public abstract class Database {
 		url = "jdbc:sqlite:" + db_file;
 		
 		try {
+			Class.forName("org.sqlite.JDBC");
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		}
+		
+		try {
 			conn = DriverManager.getConnection(url);
 			stmt = conn.createStatement();
 		} catch (SQLException e) {
