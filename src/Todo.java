@@ -34,7 +34,6 @@ public class Todo extends HttpServlet {
 		try {
 			writer = response.getWriter();
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
@@ -59,8 +58,7 @@ public class Todo extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		String f = System.getProperty("user.dir") + "/nodes.db";
-		f = "/home/wus/Projects/todo-java/nodes.db";
+		String f = "/home/wus/Projects/todo-java/nodes.db";
 		
 		int id = 0;
 		String path = request.getPathInfo();
@@ -71,9 +69,6 @@ public class Todo extends HttpServlet {
 			id = Integer.parseInt(path);
 		}
 		
-		System.out.println("Root: " + path);
-		
-		System.out.println(f);
 		try {
 			Database.open(f);
 		} catch (SQLException e1) {
