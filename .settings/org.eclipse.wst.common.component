@@ -7,6 +7,7 @@
         <wb-resource deploy-path="/" source-path="/WebContent" tag="defaultRootSource"/>
                 
         <wb-resource deploy-path="/WEB-INF/classes" source-path="/src"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/net/wunderlin/java"/>
         <dependent-module archiveName="sqlite-jdbc-3.21.0.1.jar" deploy-path="/WEB-INF/lib" handle="module:/classpath/lib//home/wus/.m2/repository/org/xerial/sqlite-jdbc/3.21.0.1/sqlite-jdbc-3.21.0.1.jar">
             <dependency-type>uses</dependency-type>
         </dependent-module>

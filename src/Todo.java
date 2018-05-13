@@ -3,6 +3,7 @@
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,15 +27,41 @@ public class Todo extends HttpServlet {
     public Todo() {
         super();
     }
+    
+    private void displayChildren(Node n, HttpServletResponse response) {
+		PrintWriter writer = null;
+		
+		try {
+			writer = response.getWriter();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		if (n.getNumChildren() > 0) {
+			ArrayList<Node> children = null;
+			try {
+				children = n.getChildren();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+			for (Node nc: children) {
+				writer.append(String.valueOf(nc.getParentId()) + " | " + nc.getName() + " | " + String.valueOf(nc.getNumChildren()) + "<br>\n");
+				if (nc.getNumChildren() > 0) {
+					displayChildren(nc, response);
+				}
+			}
+		}
+    }
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String f = System.getProperty("user.dir") + "/nodes.db";
-		String absoluteDiskPath = getServletContext().getRealPath(".");
 		f = "/home/wus/Projects/todo-java/nodes.db";
-		System.out.println(absoluteDiskPath);
+		System.out.println(f);
 		try {
 			Database.open(f);
 		} catch (SQLException e1) {
@@ -45,9 +72,9 @@ public class Todo extends HttpServlet {
 		Node n = Node.getRootNode();
 		
 		PrintWriter writer = response.getWriter();
-		writer.append("Served at: ").append(request.getContextPath());
-		writer.append("<br><br>");
-		writer.append(String.valueOf(n.getParentId()) + " | " + n.getName() + " | " + String.valueOf(n.getNumChildren()));
+		writer.append(String.valueOf(n.getParentId()) + " | " + n.getName() + " | " + String.valueOf(n.getNumChildren()) + "<br>\n");
+		
+		displayChildren(n, response);
 	}
 
 	/**
