@@ -61,6 +61,18 @@ public class Todo extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String f = System.getProperty("user.dir") + "/nodes.db";
 		f = "/home/wus/Projects/todo-java/nodes.db";
+		
+		int id = 0;
+		String path = request.getPathInfo();
+		if (path == null) { 
+			path = "";
+		} else {
+			path = path.substring(1);
+			id = Integer.parseInt(path);
+		}
+		
+		System.out.println("Root: " + path);
+		
 		System.out.println(f);
 		try {
 			Database.open(f);
@@ -69,7 +81,7 @@ public class Todo extends HttpServlet {
 		}
 		
 		Node.setRootNodeName("Nodes");
-		Node n = Node.getRootNode();
+		Node n = new Node(id);
 		
 		PrintWriter writer = response.getWriter();
 		writer.append(String.valueOf(n.getParentId()) + " | " + n.getName() + " | " + String.valueOf(n.getNumChildren()) + "<br>\n");

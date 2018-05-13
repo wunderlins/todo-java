@@ -10,4 +10,8 @@
     <welcome-file>default.jsp</welcome-file>
     <welcome-file>Todo</welcome-file>
   </welcome-file-list>
+  <servlet-mapping>
+  	<servlet-name>Todo</servlet-name>
+  	<url-pattern>/Todo/*</url-pattern>
+  </servlet-mapping>
 </web-app>
